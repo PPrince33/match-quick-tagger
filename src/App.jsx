@@ -274,7 +274,7 @@ export default function App() {
         <div className="bg-gray-900 border border-gray-800 p-8 rounded-2xl w-full max-w-md shadow-2xl">
           <div className="flex items-center justify-center mb-8 gap-3">
             <Activity className="text-blue-500 w-10 h-10" />
-            <h1 className="text-3xl font-black text-white tracking-tight">TAG<span className="text-blue-500">PRO</span></h1>
+            <h1 className="text-3xl font-black text-white tracking-tight">CAC<span className="text-blue-500">QUICK TAGGER</span></h1>
           </div>
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div>
