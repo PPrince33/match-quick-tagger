@@ -374,4 +374,48 @@ export default function App() {
         {/* Left: Clock */}
         <div className="flex items-center gap-2 bg-gray-900 px-3 md:px-4 py-2 rounded-lg border border-gray-800 md:w-32 justify-center">
           <Clock className="w-4 h-4 text-blue-500 hidden sm:block" />
-          <span className
+          <span className="font-mono text-lg md:text-xl font-black tracking-wider text-blue-100">{formatTime(matchSeconds)}</span>
+        </div>
+
+        {/* Center: Attacking 3rd Toggle */}
+        <button 
+          onClick={() => setIsAttacking3rd(!isAttacking3rd)}
+          className={`flex items-center gap-2 px-3 md:px-6 py-2 rounded-full font-bold uppercase text-[10px] md:text-sm tracking-wider transition-all border-2 flex-1 max-w-[280px] mx-2 justify-center ${
+            isAttacking3rd 
+              ? 'bg-yellow-400 text-gray-900 border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.5)]' 
+              : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-500'
+          }`}
+        >
+          <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${isAttacking3rd ? 'bg-black animate-pulse' : 'bg-gray-600'}`}></div>
+          <span className="hidden sm:inline">Attacking 3rd</span>
+          <span className="inline sm:hidden">ATT 3rd</span>
+        </button>
+
+        {/* Right: End Match */}
+        <button 
+          onClick={() => {
+            if(window.confirm('Are you sure you want to end this match?')) endMatch();
+          }}
+          className="bg-red-950/50 hover:bg-red-900 text-red-400 px-3 md:px-4 py-2 rounded-lg font-bold uppercase text-[10px] md:text-xs tracking-wider border border-red-900 transition-colors shrink-0"
+        >
+          End
+        </button>
+      </div>
+
+      {/* SPLIT SCREEN LOGIC */}
+      <div className="flex-1 flex flex-col landscape:flex-row overflow-hidden relative">
+        {/* Divider line for landscape */}
+        <div className="hidden landscape:block absolute left-1/2 top-0 bottom-0 w-1 bg-gray-800 -translate-x-1/2 z-10"></div>
+        
+        {/* Team A Panel */}
+        {renderTeamBoard(activeMatch?.team_a_id)}
+
+        {/* Divider line for portrait */}
+        <div className="block landscape:hidden h-1 w-full bg-gray-800 shrink-0"></div>
+
+        {/* Team B Panel */}
+        {renderTeamBoard(activeMatch?.team_b_id)}
+      </div>
+    </div>
+  );
+}
