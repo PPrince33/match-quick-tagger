@@ -279,7 +279,7 @@ export default function App() {
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div>
               <label className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1 block">Analyst ID</label>
-              <input name="analystId" type="text" required className="w-full bg-gray-800 text-white rounded-lg p-3 border border-gray-700 focus:border-blue-500 focus:outline-none" placeholder="e.g. jsmith01" />
+              <input name="analystId" type="text" required className="w-full bg-gray-800 text-white rounded-lg p-3 border border-gray-700 focus:border-blue-500 focus:outline-none" placeholder="" />
             </div>
             <div>
               <label className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1 block">Password</label>
