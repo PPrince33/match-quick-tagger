@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { Clock, ShieldAlert, LogOut, Trophy, Activity, AlertCircle, Goal, PlusCircle, CheckCircle2 } from 'lucide-react';
+import { Clock, ShieldAlert, LogOut, Trophy, Activity, Goal, CheckCircle2 } from 'lucide-react';
 
 // ==========================================
-// SUPABASE INITIALIZATION
+// DB INITIALIZATION
 // ==========================================
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// External DB dependencies removed for the preview environment.
+// The app will automatically run in local mock mode.
+const supabase = null;
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('login'); // login, setup, tagging
@@ -54,6 +53,7 @@ export default function App() {
   }, [toast]);
 
   const fetchTournaments = async () => {
+    if (!supabase) return; // Guard for preview environments
     const { data: tourns, error: tournsError } = await supabase.from('tournaments').select('*');
     const { data: tms, error: tmsError } = await supabase.from('teams').select('*');
     
@@ -65,6 +65,13 @@ export default function App() {
     e.preventDefault();
     const id = e.target.analystId.value;
     const pwd = e.target.password.value;
+
+    if (!supabase) {
+      // Bypass login for preview environments without Supabase keys
+      setAnalystId(id);
+      setCurrentScreen('setup');
+      return;
+    }
 
     const { data, error } = await supabase
       .from('analysts')
@@ -93,6 +100,14 @@ export default function App() {
       status: 'Live'
     };
 
+    if (!supabase) {
+       // Mock start match for preview
+       setActiveMatch({ id: 'mock-1', ...newMatch });
+       setCurrentScreen('tagging');
+       setMatchSeconds(0);
+       return;
+    }
+
     const { data, error } = await supabase
       .from('matches')
       .insert([newMatch])
@@ -110,7 +125,7 @@ export default function App() {
   };
 
   const endMatch = async () => {
-    if (activeMatch) {
+    if (activeMatch && supabase) {
       await supabase
         .from('matches')
         .update({ status: 'Finished' })
@@ -126,19 +141,18 @@ export default function App() {
     const teamName = teams.find(t => t.id === teamId)?.name || 'Team';
     
     const eventPayload = {
-      match_id: activeMatch.id,
+      match_id: activeMatch?.id || 'mock-1',
       team_id: teamId,
       event_type: eventType,
       is_attacking_3rd: isAttacking3rd,
       match_minute: matchMinute
     };
 
-    const { error } = await supabase.from('events').insert([eventPayload]);
-    
-    if (!error) {
-      setToast(`Logged: ${teamName} - ${eventType}`);
-    } else {
-      console.error("Failed to log event:", error);
+    setToast(`Logged: ${teamName} - ${eventType}`);
+
+    if (supabase) {
+      const { error } = await supabase.from('events').insert([eventPayload]);
+      if (error) console.error("Failed to log event:", error);
     }
   };
 
@@ -156,7 +170,6 @@ export default function App() {
 
   const renderButton = (teamId, label, type) => {
     // Dynamic styling based on group and Attacking 3rd state
-    // Now standardizes into a single column row layout rather than square grids
     let baseStyle = "w-full py-4 rounded-xl font-bold text-sm md:text-base uppercase tracking-wide transition-all active:scale-95 shadow-md flex items-center justify-center gap-2 leading-tight px-4 text-center";
     
     if (type === 'pass') {
@@ -166,13 +179,12 @@ export default function App() {
         baseStyle += " bg-slate-700 text-white hover:bg-slate-600";
       }
     } else if (type === 'shot') {
-      if (label === 'Goal') baseStyle += " bg-emerald-500 text-black border-2 border-emerald-600";
+      if (label === 'GOAL') baseStyle += " bg-emerald-500 text-black border-2 border-emerald-600";
       else baseStyle += " bg-orange-600 text-white hover:bg-orange-500";
     } else if (type === 'action') {
-      if (label === 'yellow card') baseStyle += " bg-yellow-400 text-black";
-      else if (label === 'red card') baseStyle += " bg-red-600 text-white";
-      else if (label === 'foul' || label === 'tackle') baseStyle += " bg-rose-800 text-white hover:bg-rose-700";
-      else baseStyle += " bg-indigo-700 text-white hover:bg-indigo-600"; // Carry, Dribble
+      if (label === 'Yellow Card') baseStyle += " bg-yellow-400 text-black";
+      else if (label === 'Red Card') baseStyle += " bg-red-600 text-white";
+      else if (label === 'Foul' || label === 'Tackle') baseStyle += " bg-rose-800 text-white hover:bg-rose-700";
     }
 
     return (
@@ -186,8 +198,6 @@ export default function App() {
     );
   };
 
-  // Converted from a Component to a render function to prevent state/scroll resets
-  // during every match tick!
   const renderTeamBoard = (teamId) => (
     <div className="flex-1 flex flex-col bg-gray-900 p-3 md:p-6 gap-4 overflow-y-auto">
       <div className="text-center font-black text-xl md:text-2xl text-white tracking-widest uppercase border-b border-gray-700 pb-3 flex items-center justify-center gap-2 shrink-0">
@@ -201,27 +211,27 @@ export default function App() {
           <span>Passing</span>
           {isAttacking3rd && <span className="text-yellow-400">Attacking 3rd Active</span>}
         </div>
-        {/* Single column stack of buttons */}
         <div className="flex flex-col gap-3">
-          {['successful pass', 'Miss pass', 'intercepted pass', 'off side'].map(lbl => renderButton(teamId, lbl, 'pass'))}
+          {/* Simplified Passes List */}
+          {['Successful Pass', 'Missed Pass', 'Intercepted Pass'].map(lbl => renderButton(teamId, lbl, 'pass'))}
         </div>
       </div>
 
       {/* Shots Group */}
       <div className="bg-gray-800 p-3 md:p-4 rounded-xl shrink-0">
         <div className="text-sm text-gray-400 uppercase font-bold mb-3 tracking-wider">Shots / Attempts</div>
-        {/* Single column stack of buttons */}
         <div className="flex flex-col gap-3">
-          {['save+SoT', 'Block+SoT', 'Goal', 'Wood work', 'Off target'].map(lbl => renderButton(teamId, lbl, 'shot'))}
+          {/* Simplified Shots List */}
+          {['Shot', 'SoT', 'GOAL'].map(lbl => renderButton(teamId, lbl, 'shot'))}
         </div>
       </div>
 
       {/* Actions Group */}
       <div className="bg-gray-800 p-3 md:p-4 rounded-xl mb-6 shrink-0">
         <div className="text-sm text-gray-400 uppercase font-bold mb-3 tracking-wider">Actions / Disciplinary</div>
-        {/* Single column stack of buttons */}
         <div className="flex flex-col gap-3">
-          {['dribble', 'carry', 'yellow card', 'red card', 'tackle', 'foul'].map(lbl => renderButton(teamId, lbl, 'action'))}
+           {/* Simplified Actions List */}
+          {['Yellow Card', 'Red Card', 'Tackle', 'Foul'].map(lbl => renderButton(teamId, lbl, 'action'))}
         </div>
       </div>
     </div>
@@ -259,7 +269,9 @@ export default function App() {
 
   if (currentScreen === 'setup') {
     const availableTeamsForB = teams.filter(t => t.tournament_id === selectedTournament && t.id !== selectedTeamA);
-    const isReady = selectedTournament && selectedTeamA && selectedTeamB;
+    
+    // Fallback to true if we don't have supabase connected (for previews)
+    const isReady = !supabase ? true : (selectedTournament && selectedTeamA && selectedTeamB);
 
     return (
       <div className="min-h-[100dvh] bg-gray-950 flex flex-col p-4 md:p-8">
@@ -286,7 +298,7 @@ export default function App() {
                   onChange={(e) => { setSelectedTournament(e.target.value); setSelectedTeamA(''); setSelectedTeamB(''); }}
                 >
                   <option value="">-- Choose Tournament --</option>
-                  {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {tournaments.length > 0 ? tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>) : <option value="mock-tourney">Mock Tournament</option>}
                 </select>
               </div>
 
@@ -300,9 +312,9 @@ export default function App() {
                       onChange={(e) => setSelectedTeamA(e.target.value)}
                     >
                       <option value="">-- Select Team A --</option>
-                      {teams.filter(t => t.tournament_id === selectedTournament).map(t => (
+                      {teams.length > 0 ? teams.filter(t => t.tournament_id === selectedTournament).map(t => (
                         <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
+                      )) : <option value="mock-team-a">Mock Team A</option>}
                     </select>
                   </div>
                   
@@ -315,9 +327,9 @@ export default function App() {
                       disabled={!selectedTeamA}
                     >
                       <option value="">-- Select Team B --</option>
-                      {availableTeamsForB.map(t => (
+                      {teams.length > 0 ? availableTeamsForB.map(t => (
                         <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
+                      )) : <option value="mock-team-b">Mock Team B</option>}
                     </select>
                   </div>
                 </div>
