@@ -156,8 +156,8 @@ export default function App() {
 
   const renderButton = (teamId, label, type) => {
     // Dynamic styling based on group and Attacking 3rd state
-    // aspect-square makes the button squarer. flex-col helps wrap the text neatly.
-    let baseStyle = "w-full aspect-square rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wide transition-all active:scale-95 shadow-md flex flex-col items-center justify-center gap-1 leading-tight p-2 text-center";
+    // Now standardizes into a single column row layout rather than square grids
+    let baseStyle = "w-full py-4 rounded-xl font-bold text-sm md:text-base uppercase tracking-wide transition-all active:scale-95 shadow-md flex items-center justify-center gap-2 leading-tight px-4 text-center";
     
     if (type === 'pass') {
       if (isAttacking3rd) {
@@ -186,39 +186,41 @@ export default function App() {
     );
   };
 
-  const TeamBoard = ({ teamId }) => (
-    <div className="flex-1 flex flex-col bg-gray-900 p-2 md:p-4 gap-3 overflow-y-auto">
-      <div className="text-center font-black text-xl md:text-2xl text-white tracking-widest uppercase border-b border-gray-700 pb-2 flex items-center justify-center gap-2">
-        <ShieldAlert className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
+  // Converted from a Component to a render function to prevent state/scroll resets
+  // during every match tick!
+  const renderTeamBoard = (teamId) => (
+    <div className="flex-1 flex flex-col bg-gray-900 p-3 md:p-6 gap-4 overflow-y-auto">
+      <div className="text-center font-black text-xl md:text-2xl text-white tracking-widest uppercase border-b border-gray-700 pb-3 flex items-center justify-center gap-2 shrink-0">
+        <ShieldAlert className="w-6 h-6 text-gray-400" />
         {getTeamName(teamId)}
       </div>
 
       {/* Passes Group */}
-      <div className={`p-2 rounded-xl transition-colors duration-300 ${isAttacking3rd ? 'bg-yellow-400/10 border border-yellow-500/30' : 'bg-gray-800'}`}>
-        <div className="text-xs text-gray-400 uppercase font-bold mb-2 tracking-wider flex justify-between">
+      <div className={`p-3 md:p-4 rounded-xl transition-colors duration-300 shrink-0 ${isAttacking3rd ? 'bg-yellow-400/10 border border-yellow-500/30' : 'bg-gray-800'}`}>
+        <div className="text-sm text-gray-400 uppercase font-bold mb-3 tracking-wider flex justify-between">
           <span>Passing</span>
           {isAttacking3rd && <span className="text-yellow-400">Attacking 3rd Active</span>}
         </div>
-        {/* grid-cols-2 for 4 items makes a perfect parallel 2x2 square */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {/* Single column stack of buttons */}
+        <div className="flex flex-col gap-3">
           {['successful pass', 'Miss pass', 'intercepted pass', 'off side'].map(lbl => renderButton(teamId, lbl, 'pass'))}
         </div>
       </div>
 
       {/* Shots Group */}
-      <div className="bg-gray-800 p-2 rounded-xl">
-        <div className="text-xs text-gray-400 uppercase font-bold mb-2 tracking-wider">Shots / Attempts</div>
-        {/* grid-cols-3 handles the 5 items smoothly, keeping squares smaller */}
-        <div className="grid grid-cols-3 gap-2">
+      <div className="bg-gray-800 p-3 md:p-4 rounded-xl shrink-0">
+        <div className="text-sm text-gray-400 uppercase font-bold mb-3 tracking-wider">Shots / Attempts</div>
+        {/* Single column stack of buttons */}
+        <div className="flex flex-col gap-3">
           {['save+SoT', 'Block+SoT', 'Goal', 'Wood work', 'Off target'].map(lbl => renderButton(teamId, lbl, 'shot'))}
         </div>
       </div>
 
       {/* Actions Group */}
-      <div className="bg-gray-800 p-2 rounded-xl mb-4">
-        <div className="text-xs text-gray-400 uppercase font-bold mb-2 tracking-wider">Actions / Disciplinary</div>
-        {/* grid-cols-3 makes a perfect 2x3 block of squares for these 6 items */}
-        <div className="grid grid-cols-3 gap-2">
+      <div className="bg-gray-800 p-3 md:p-4 rounded-xl mb-6 shrink-0">
+        <div className="text-sm text-gray-400 uppercase font-bold mb-3 tracking-wider">Actions / Disciplinary</div>
+        {/* Single column stack of buttons */}
+        <div className="flex flex-col gap-3">
           {['dribble', 'carry', 'yellow card', 'red card', 'tackle', 'foul'].map(lbl => renderButton(teamId, lbl, 'action'))}
         </div>
       </div>
@@ -231,7 +233,7 @@ export default function App() {
 
   if (currentScreen === 'login') {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-gray-950 flex items-center justify-center p-4">
         <div className="bg-gray-900 border border-gray-800 p-8 rounded-2xl w-full max-w-md shadow-2xl">
           <div className="flex items-center justify-center mb-8 gap-3">
             <Activity className="text-blue-500 w-10 h-10" />
@@ -260,7 +262,7 @@ export default function App() {
     const isReady = selectedTournament && selectedTeamA && selectedTeamB;
 
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col p-4 md:p-8">
+      <div className="min-h-[100dvh] bg-gray-950 flex flex-col p-4 md:p-8">
         <div className="max-w-4xl w-full mx-auto bg-gray-900 border border-gray-800 rounded-3xl p-6 md:p-10 shadow-2xl">
           <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-6">
             <h1 className="text-2xl font-black text-white flex items-center gap-2">
@@ -356,7 +358,7 @@ export default function App() {
   // TAGGING INTERFACE (Split Screen)
   // ==========================================
   return (
-    <div className="h-screen w-screen flex flex-col bg-black text-white overflow-hidden font-sans select-none">
+    <div className="h-[100dvh] w-screen flex flex-col bg-black text-white overflow-hidden font-sans select-none">
       
       {/* Toast Notification (Feedback) */}
       {toast && (
@@ -372,48 +374,4 @@ export default function App() {
         {/* Left: Clock */}
         <div className="flex items-center gap-2 bg-gray-900 px-3 md:px-4 py-2 rounded-lg border border-gray-800 md:w-32 justify-center">
           <Clock className="w-4 h-4 text-blue-500 hidden sm:block" />
-          <span className="font-mono text-lg md:text-xl font-black tracking-wider text-blue-100">{formatTime(matchSeconds)}</span>
-        </div>
-
-        {/* Center: Attacking 3rd Toggle */}
-        <button 
-          onClick={() => setIsAttacking3rd(!isAttacking3rd)}
-          className={`flex items-center gap-2 px-3 md:px-6 py-2 rounded-full font-bold uppercase text-[10px] md:text-sm tracking-wider transition-all border-2 flex-1 max-w-[280px] mx-2 justify-center ${
-            isAttacking3rd 
-              ? 'bg-yellow-400 text-gray-900 border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.5)]' 
-              : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-500'
-          }`}
-        >
-          <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${isAttacking3rd ? 'bg-black animate-pulse' : 'bg-gray-600'}`}></div>
-          <span className="hidden sm:inline">Attacking 3rd</span>
-          <span className="inline sm:hidden">ATT 3rd</span>
-        </button>
-
-        {/* Right: End Match */}
-        <button 
-          onClick={() => {
-            if(window.confirm('Are you sure you want to end this match?')) endMatch();
-          }}
-          className="bg-red-950/50 hover:bg-red-900 text-red-400 px-3 md:px-4 py-2 rounded-lg font-bold uppercase text-[10px] md:text-xs tracking-wider border border-red-900 transition-colors shrink-0"
-        >
-          End
-        </button>
-      </div>
-
-      {/* SPLIT SCREEN LOGIC */}
-      <div className="flex-1 flex flex-col landscape:flex-row overflow-hidden relative">
-        {/* Divider line for landscape */}
-        <div className="hidden landscape:block absolute left-1/2 top-0 bottom-0 w-1 bg-gray-800 -translate-x-1/2 z-10"></div>
-        
-        {/* Team A Panel */}
-        <TeamBoard teamId={activeMatch?.team_a_id} />
-
-        {/* Divider line for portrait */}
-        <div className="block landscape:hidden h-1 w-full bg-gray-800 shrink-0"></div>
-
-        {/* Team B Panel */}
-        <TeamBoard teamId={activeMatch?.team_b_id} />
-      </div>
-    </div>
-  );
-}
+          <span className
