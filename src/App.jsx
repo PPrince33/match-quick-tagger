@@ -2,29 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Clock, ShieldAlert, LogOut, Trophy, Activity, AlertCircle, Goal, PlusCircle, CheckCircle2 } from 'lucide-react';
 
-
 // ==========================================
 // SUPABASE INITIALIZATION
 // ==========================================
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-// For testing the UI right now, leave this as null:
-// const supabase = null;
-// For testing the UI right now, leave this as null:
-// const supabase = null;
-
-// ==========================================
-// MOCK DATA (For Preview Environment)
-// ==========================================
-const MOCK_TOURNAMENTS = [{ id: '1', name: 'World Cup 2026' }];
-const MOCK_TEAMS = [
-  { id: '1', name: 'Argentina', tournament_id: '1' },
-  { id: '2', name: 'France', tournament_id: '1' },
-  { id: '3', name: 'Brazil', tournament_id: '1' },
-  { id: '4', name: 'England', tournament_id: '1' },
-];
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('login'); // login, setup, tagging
@@ -71,30 +54,17 @@ export default function App() {
   }, [toast]);
 
   const fetchTournaments = async () => {
-    if (!supabase) {
-      setTournaments(MOCK_TOURNAMENTS);
-      setTeams(MOCK_TEAMS);
-      return;
-    }
-    const { data: tourns } = await supabase.from('tournaments').select('*');
-    const { data: tms } = await supabase.from('teams').select('*');
-    if (tourns) setTournaments(tourns);
-    if (tms) setTeams(tms);
+    const { data: tourns, error: tournsError } = await supabase.from('tournaments').select('*');
+    const { data: tms, error: tmsError } = await supabase.from('teams').select('*');
+    
+    if (tourns && !tournsError) setTournaments(tourns);
+    if (tms && !tmsError) setTeams(tms);
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     const id = e.target.analystId.value;
     const pwd = e.target.password.value;
-
-    if (!supabase) {
-      // Mock Login
-      if (id && pwd) {
-        setAnalystId(id);
-        setCurrentScreen('setup');
-      }
-      return;
-    }
 
     const { data, error } = await supabase
       .from('analysts')
@@ -123,14 +93,6 @@ export default function App() {
       status: 'Live'
     };
 
-    if (!supabase) {
-      // Mock Start
-      setActiveMatch({ id: 'mock-match-id', ...newMatch });
-      setCurrentScreen('tagging');
-      setMatchSeconds(0);
-      return;
-    }
-
     const { data, error } = await supabase
       .from('matches')
       .insert([newMatch])
@@ -141,21 +103,19 @@ export default function App() {
       setActiveMatch(data);
       setCurrentScreen('tagging');
       setMatchSeconds(0);
+    } else {
+      alert('Failed to start match. Please check your database connection.');
+      console.error(error);
     }
   };
 
   const endMatch = async () => {
-    if (!supabase && activeMatch) {
-      // Mock End
-      setActiveMatch(null);
-      setCurrentScreen('setup');
-      return;
+    if (activeMatch) {
+      await supabase
+        .from('matches')
+        .update({ status: 'Finished' })
+        .eq('id', activeMatch.id);
     }
-
-    await supabase
-      .from('matches')
-      .update({ status: 'Finished' })
-      .eq('id', activeMatch.id);
       
     setActiveMatch(null);
     setCurrentScreen('setup');
@@ -173,15 +133,12 @@ export default function App() {
       match_minute: matchMinute
     };
 
-    if (!supabase) {
-      console.log('Mock Logged Event:', eventPayload);
-      setToast(`Logged: ${teamName} - ${eventType}`);
-      return;
-    }
-
     const { error } = await supabase.from('events').insert([eventPayload]);
+    
     if (!error) {
       setToast(`Logged: ${teamName} - ${eventType}`);
+    } else {
+      console.error("Failed to log event:", error);
     }
   };
 
@@ -199,7 +156,8 @@ export default function App() {
 
   const renderButton = (teamId, label, type) => {
     // Dynamic styling based on group and Attacking 3rd state
-    let baseStyle = "w-full py-3 md:py-4 rounded-xl font-bold text-xs md:text-sm uppercase tracking-wide transition-all active:scale-95 shadow-md flex items-center justify-center gap-1 leading-tight px-1 text-center";
+    // aspect-square makes the button squarer. flex-col helps wrap the text neatly.
+    let baseStyle = "w-full aspect-square rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wide transition-all active:scale-95 shadow-md flex flex-col items-center justify-center gap-1 leading-tight p-2 text-center";
     
     if (type === 'pass') {
       if (isAttacking3rd) {
@@ -231,7 +189,7 @@ export default function App() {
   const TeamBoard = ({ teamId }) => (
     <div className="flex-1 flex flex-col bg-gray-900 p-2 md:p-4 gap-3 overflow-y-auto">
       <div className="text-center font-black text-xl md:text-2xl text-white tracking-widest uppercase border-b border-gray-700 pb-2 flex items-center justify-center gap-2">
-        <ShieldAlert className="w-6 h-6 text-gray-400" />
+        <ShieldAlert className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
         {getTeamName(teamId)}
       </div>
 
@@ -241,7 +199,8 @@ export default function App() {
           <span>Passing</span>
           {isAttacking3rd && <span className="text-yellow-400">Attacking 3rd Active</span>}
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        {/* grid-cols-2 for 4 items makes a perfect parallel 2x2 square */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {['successful pass', 'Miss pass', 'intercepted pass', 'off side'].map(lbl => renderButton(teamId, lbl, 'pass'))}
         </div>
       </div>
@@ -249,15 +208,17 @@ export default function App() {
       {/* Shots Group */}
       <div className="bg-gray-800 p-2 rounded-xl">
         <div className="text-xs text-gray-400 uppercase font-bold mb-2 tracking-wider">Shots / Attempts</div>
-        <div className="grid grid-cols-2 gap-2">
+        {/* grid-cols-3 handles the 5 items smoothly, keeping squares smaller */}
+        <div className="grid grid-cols-3 gap-2">
           {['save+SoT', 'Block+SoT', 'Goal', 'Wood work', 'Off target'].map(lbl => renderButton(teamId, lbl, 'shot'))}
         </div>
       </div>
 
       {/* Actions Group */}
-      <div className="bg-gray-800 p-2 rounded-xl">
+      <div className="bg-gray-800 p-2 rounded-xl mb-4">
         <div className="text-xs text-gray-400 uppercase font-bold mb-2 tracking-wider">Actions / Disciplinary</div>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+        {/* grid-cols-3 makes a perfect 2x3 block of squares for these 6 items */}
+        <div className="grid grid-cols-3 gap-2">
           {['dribble', 'carry', 'yellow card', 'red card', 'tackle', 'foul'].map(lbl => renderButton(teamId, lbl, 'action'))}
         </div>
       </div>
@@ -285,12 +246,6 @@ export default function App() {
               <label className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1 block">Password</label>
               <input name="password" type="password" required className="w-full bg-gray-800 text-white rounded-lg p-3 border border-gray-700 focus:border-blue-500 focus:outline-none" placeholder="••••••••" />
             </div>
-            {!supabase && (
-              <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-3 text-sm text-yellow-200 flex items-start gap-2 mt-2">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <p>Running in <b>Preview Mode</b> (No Database connected). Any Analyst ID/Password will log you in.</p>
-              </div>
-            )}
             <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-bold p-4 rounded-xl mt-4 transition-colors">
               Login to System
             </button>
@@ -415,22 +370,23 @@ export default function App() {
       <div className="h-16 bg-gray-950 flex items-center justify-between px-2 md:px-6 border-b border-gray-800 shadow-xl z-10 shrink-0">
         
         {/* Left: Clock */}
-        <div className="flex items-center gap-2 bg-gray-900 px-4 py-2 rounded-lg border border-gray-800 w-32 justify-center">
-          <Clock className="w-4 h-4 text-blue-500" />
-          <span className="font-mono text-xl font-black tracking-wider text-blue-100">{formatTime(matchSeconds)}</span>
+        <div className="flex items-center gap-2 bg-gray-900 px-3 md:px-4 py-2 rounded-lg border border-gray-800 md:w-32 justify-center">
+          <Clock className="w-4 h-4 text-blue-500 hidden sm:block" />
+          <span className="font-mono text-lg md:text-xl font-black tracking-wider text-blue-100">{formatTime(matchSeconds)}</span>
         </div>
 
         {/* Center: Attacking 3rd Toggle */}
         <button 
           onClick={() => setIsAttacking3rd(!isAttacking3rd)}
-          className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold uppercase tracking-wider transition-all border-2 flex-1 max-w-[280px] mx-2 justify-center ${
+          className={`flex items-center gap-2 px-3 md:px-6 py-2 rounded-full font-bold uppercase text-[10px] md:text-sm tracking-wider transition-all border-2 flex-1 max-w-[280px] mx-2 justify-center ${
             isAttacking3rd 
               ? 'bg-yellow-400 text-gray-900 border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.5)]' 
               : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-500'
           }`}
         >
-          <div className={`w-3 h-3 rounded-full ${isAttacking3rd ? 'bg-black animate-pulse' : 'bg-gray-600'}`}></div>
-          Attacking 3rd
+          <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${isAttacking3rd ? 'bg-black animate-pulse' : 'bg-gray-600'}`}></div>
+          <span className="hidden sm:inline">Attacking 3rd</span>
+          <span className="inline sm:hidden">ATT 3rd</span>
         </button>
 
         {/* Right: End Match */}
@@ -438,16 +394,13 @@ export default function App() {
           onClick={() => {
             if(window.confirm('Are you sure you want to end this match?')) endMatch();
           }}
-          className="bg-red-950/50 hover:bg-red-900 text-red-400 px-4 py-2 rounded-lg font-bold uppercase text-xs tracking-wider border border-red-900 transition-colors shrink-0"
+          className="bg-red-950/50 hover:bg-red-900 text-red-400 px-3 md:px-4 py-2 rounded-lg font-bold uppercase text-[10px] md:text-xs tracking-wider border border-red-900 transition-colors shrink-0"
         >
-          End Match
+          End
         </button>
       </div>
 
-      {/* SPLIT SCREEN LOGIC:
-        landscape:flex-row handles horizontal phones and wide desktops
-        flex-col handles vertical phones and portrait tablets
-      */}
+      {/* SPLIT SCREEN LOGIC */}
       <div className="flex-1 flex flex-col landscape:flex-row overflow-hidden relative">
         {/* Divider line for landscape */}
         <div className="hidden landscape:block absolute left-1/2 top-0 bottom-0 w-1 bg-gray-800 -translate-x-1/2 z-10"></div>
