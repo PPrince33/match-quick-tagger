@@ -6,8 +6,7 @@ import { Clock, ShieldAlert, LogOut, Trophy, Activity, Goal, CheckCircle2 } from
 // SUPABASE INITIALIZATION
 // ==========================================
 // Add your Supabase URL and Key here to connect to your database.
-// Note: Hardcode your actual keys here if running in this environment, 
-// or use your framework's environment variables if exporting to a local project.
+// If running locally in Vite, you can switch back to: import.meta.env.VITE_SUPABASE_URL
 const supabaseUrl = "YOUR_SUPABASE_URL";
 const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
 const supabase = createClient(supabaseUrl, supabaseKey);
