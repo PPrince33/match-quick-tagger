@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Clock, ShieldAlert, LogOut, Trophy, Activity, Goal, CheckCircle2 } from 'lucide-react';
 
 // ==========================================
-// DB INITIALIZATION
+// SUPABASE INITIALIZATION
 // ==========================================
-// External DB dependencies removed for the preview environment.
-// The app will automatically run in local mock mode.
-const supabase = null;
+// Add your Supabase URL and Key here to connect to your database.
+// If running locally in Vite, you can switch back to: import.meta.env.VITE_SUPABASE_URL
+const supabaseUrl = "YOUR_SUPABASE_URL";
+const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('login'); // login, setup, tagging
@@ -53,7 +56,6 @@ export default function App() {
   }, [toast]);
 
   const fetchTournaments = async () => {
-    if (!supabase) return; // Guard for preview environments
     const { data: tourns, error: tournsError } = await supabase.from('tournaments').select('*');
     const { data: tms, error: tmsError } = await supabase.from('teams').select('*');
     
@@ -65,13 +67,6 @@ export default function App() {
     e.preventDefault();
     const id = e.target.analystId.value;
     const pwd = e.target.password.value;
-
-    if (!supabase) {
-      // Bypass login for preview environments without Supabase keys
-      setAnalystId(id);
-      setCurrentScreen('setup');
-      return;
-    }
 
     const { data, error } = await supabase
       .from('analysts')
@@ -100,14 +95,6 @@ export default function App() {
       status: 'Live'
     };
 
-    if (!supabase) {
-       // Mock start match for preview
-       setActiveMatch({ id: 'mock-1', ...newMatch });
-       setCurrentScreen('tagging');
-       setMatchSeconds(0);
-       return;
-    }
-
     const { data, error } = await supabase
       .from('matches')
       .insert([newMatch])
@@ -125,7 +112,7 @@ export default function App() {
   };
 
   const endMatch = async () => {
-    if (activeMatch && supabase) {
+    if (activeMatch) {
       await supabase
         .from('matches')
         .update({ status: 'Finished' })
@@ -141,18 +128,19 @@ export default function App() {
     const teamName = teams.find(t => t.id === teamId)?.name || 'Team';
     
     const eventPayload = {
-      match_id: activeMatch?.id || 'mock-1',
+      match_id: activeMatch.id,
       team_id: teamId,
       event_type: eventType,
       is_attacking_3rd: isAttacking3rd,
       match_minute: matchMinute
     };
 
-    setToast(`Logged: ${teamName} - ${eventType}`);
-
-    if (supabase) {
-      const { error } = await supabase.from('events').insert([eventPayload]);
-      if (error) console.error("Failed to log event:", error);
+    const { error } = await supabase.from('events').insert([eventPayload]);
+    
+    if (!error) {
+      setToast(`Logged: ${teamName} - ${eventType}`);
+    } else {
+      console.error("Failed to log event:", error);
     }
   };
 
@@ -212,7 +200,6 @@ export default function App() {
           {isAttacking3rd && <span className="text-yellow-400">Attacking 3rd Active</span>}
         </div>
         <div className="flex flex-col gap-3">
-          {/* Simplified Passes List */}
           {['Successful Pass', 'Missed Pass', 'Intercepted Pass'].map(lbl => renderButton(teamId, lbl, 'pass'))}
         </div>
       </div>
@@ -221,7 +208,6 @@ export default function App() {
       <div className="bg-gray-800 p-3 md:p-4 rounded-xl shrink-0">
         <div className="text-sm text-gray-400 uppercase font-bold mb-3 tracking-wider">Shots / Attempts</div>
         <div className="flex flex-col gap-3">
-          {/* Simplified Shots List */}
           {['Shot', 'SoT', 'GOAL'].map(lbl => renderButton(teamId, lbl, 'shot'))}
         </div>
       </div>
@@ -230,7 +216,6 @@ export default function App() {
       <div className="bg-gray-800 p-3 md:p-4 rounded-xl mb-6 shrink-0">
         <div className="text-sm text-gray-400 uppercase font-bold mb-3 tracking-wider">Actions / Disciplinary</div>
         <div className="flex flex-col gap-3">
-           {/* Simplified Actions List */}
           {['Yellow Card', 'Red Card', 'Tackle', 'Foul'].map(lbl => renderButton(teamId, lbl, 'action'))}
         </div>
       </div>
@@ -269,9 +254,7 @@ export default function App() {
 
   if (currentScreen === 'setup') {
     const availableTeamsForB = teams.filter(t => t.tournament_id === selectedTournament && t.id !== selectedTeamA);
-    
-    // Fallback to true if we don't have supabase connected (for previews)
-    const isReady = !supabase ? true : (selectedTournament && selectedTeamA && selectedTeamB);
+    const isReady = selectedTournament && selectedTeamA && selectedTeamB;
 
     return (
       <div className="min-h-[100dvh] bg-gray-950 flex flex-col p-4 md:p-8">
@@ -298,7 +281,7 @@ export default function App() {
                   onChange={(e) => { setSelectedTournament(e.target.value); setSelectedTeamA(''); setSelectedTeamB(''); }}
                 >
                   <option value="">-- Choose Tournament --</option>
-                  {tournaments.length > 0 ? tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>) : <option value="mock-tourney">Mock Tournament</option>}
+                  {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
 
@@ -312,9 +295,9 @@ export default function App() {
                       onChange={(e) => setSelectedTeamA(e.target.value)}
                     >
                       <option value="">-- Select Team A --</option>
-                      {teams.length > 0 ? teams.filter(t => t.tournament_id === selectedTournament).map(t => (
+                      {teams.filter(t => t.tournament_id === selectedTournament).map(t => (
                         <option key={t.id} value={t.id}>{t.name}</option>
-                      )) : <option value="mock-team-a">Mock Team A</option>}
+                      ))}
                     </select>
                   </div>
                   
@@ -327,9 +310,9 @@ export default function App() {
                       disabled={!selectedTeamA}
                     >
                       <option value="">-- Select Team B --</option>
-                      {teams.length > 0 ? availableTeamsForB.map(t => (
+                      {availableTeamsForB.map(t => (
                         <option key={t.id} value={t.id}>{t.name}</option>
-                      )) : <option value="mock-team-b">Mock Team B</option>}
+                      ))}
                     </select>
                   </div>
                 </div>
