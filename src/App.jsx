@@ -7,9 +7,9 @@ import { Clock, ShieldAlert, LogOut, Trophy, Activity, Goal, CheckCircle2 } from
 // ==========================================
 // Add your Supabase URL and Key here to connect to your database.
 // If running locally in Vite, you can switch back to: import.meta.env.VITE_SUPABASE_URL
-const supabaseUrl = "YOUR_SUPABASE_URL";
-const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);;
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('login'); // login, setup, tagging
