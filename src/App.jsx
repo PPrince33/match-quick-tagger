@@ -6,10 +6,11 @@ import { Clock, ShieldAlert, LogOut, Trophy, Activity, Goal, CheckCircle2 } from
 // SUPABASE INITIALIZATION
 // ==========================================
 // Add your Supabase URL and Key here to connect to your database.
-// If running locally in Vite, you can switch back to: import.meta.env.VITE_SUPABASE_URL
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);;
+// Note: Hardcode your actual keys here if running in this environment, 
+// or use your framework's environment variables if exporting to a local project.
+const supabaseUrl = "YOUR_SUPABASE_URL";
+const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('login'); // login, setup, tagging
@@ -113,6 +114,15 @@ export default function App() {
 
   const endMatch = async () => {
     if (activeMatch) {
+      // Log the 'end' event before finishing the match
+      const matchMinute = Math.floor(matchSeconds / 60);
+      await supabase.from('events').insert([{
+        match_id: activeMatch.id,
+        event_type: 'end',
+        is_attacking_3rd: isAttacking3rd,
+        match_minute: matchMinute
+      }]);
+
       await supabase
         .from('matches')
         .update({ status: 'Finished' })
